@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Prediksi Penjualan iPhone</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+
+  <div class="sidebar">
+    <div class="brand">C4.5<span> </span>iPHONE SALES</div>
+    <div class="step-nav" id="stepNav"></div>
+    <div class="sidebar-foot">Algoritma C4.5<br>Entropy · Information Gain · Gain Ratio<br>Klasifikasi: Tinggi / Sedang / Rendah</div>
+  </div>
+
+  <div class="main">
+
+    <!-- STEP 1: DATA -->
+    <div class="panel active" data-panel="1">
+      <div class="eyebrow">Langkah 01</div>
+      <h1>Data Penjualan iPhone</h1>
+      <p class="lede">Unggah dataset CSV (atribut + kolom target tingkat penjualan), atau gunakan data contoh untuk mencoba sistem terlebih dahulu.</p>
+
+      <div class="card">
+        <h3>Sumber Data</h3>
+        <div class="row" style="margin-bottom:14px;">
+          <label class="upload-zone" style="flex:1; min-width:220px;" id="uploadZone">
+            <input type="file" id="fileInput" accept=".csv">
+            📄 Klik untuk unggah file CSV
+          </label>
+          <button class="btn-ghost" id="sampleBtn">Gunakan Data Contoh (90 baris)</button>
+        </div>
+        <div class="note" id="dataStatus">Belum ada data dimuat.</div>
+      </div>
+
+      <div class="card" id="previewCard" style="display:none;">
+        <h3>Pratinjau Data</h3>
+        <div class="table-scroll"><table id="previewTable"></table></div>
+        <div class="row" style="margin-top:16px;">
+          <button class="btn-primary" id="toStep2">Lanjut ke Konfigurasi →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: CONFIG -->
+    <div class="panel" data-panel="2">
+      <div class="eyebrow">Langkah 02</div>
+      <h1>Konfigurasi Atribut</h1>
+      <p class="lede">Tentukan kolom target (label kelas) dan atribut prediktor yang akan dipakai algoritma C4.5 untuk membangun pohon keputusan.</p>
+
+      <div class="card">
+        <h3>Kolom Target (Y — Tingkat Penjualan)</h3>
+        <div class="chip-group" id="targetChips"></div>
+      </div>
+
+      <div class="card">
+        <h3>Atribut Prediktor (X)</h3>
+        <div class="chip-group" id="featureChips"></div>
+        <div class="note">Atribut numerik otomatis dipecah menggunakan ambang batas (threshold) terbaik; atribut kategorikal dipecah per nilai unik.</div>
+      </div>
+
+      <div class="card">
+        <h3>Parameter Pohon</h3>
+        <div class="row">
+          <div class="field" style="min-width:180px;">
+            <label>Kedalaman Maksimum</label>
+            <select id="maxDepth">
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5" selected>5</option>
+              <option value="6">6</option>
+              <option value="8">8</option>
+            </select>
+          </div>
+          <div class="field" style="min-width:180px;">
+            <label>Minimum Sampel per Simpul</label>
+            <select id="minSamples">
+              <option value="1">1</option>
+              <option value="2" selected>2</option>
+              <option value="3">3</option>
+              <option value="5">5</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <button class="btn-ghost" onclick="goStep(1)">← Kembali</button>
+        <button class="btn-primary" id="toStep3">Bangun Pohon Keputusan (C4.5) →</button>
+      </div>
+    </div>
+
+    <!-- STEP 3: TREE -->
+    <div class="panel" data-panel="3">
+      <div class="eyebrow">Langkah 03</div>
+      <h1>Perhitungan &amp; Pohon Keputusan</h1>
+      <p class="lede">Entropy total dataset, Information Gain dan Gain Ratio tiap atribut pada simpul akar, lalu struktur pohon keputusan hasil algoritma C4.5.</p>
+
+      <div class="card" id="entropyCard" style="display:none;">
+        <h3>Entropy Total (Simpul Akar)</h3>
+        <div class="formula">Entropy(S) = − Σ p(i) · log₂ p(i)</div>
+        <div class="stat-grid" id="rootStats"></div>
+      </div>
+
+      <div class="card" id="gainCard" style="display:none;">
+        <h3>Information Gain &amp; Gain Ratio per Atribut (Simpul Akar)</h3>
+        <div class="formula">GainRatio(A) = Gain(S,A) / SplitInfo(S,A)</div>
+        <div class="table-scroll"><table id="gainTable"></table></div>
+        <div class="note" id="chosenAttrNote"></div>
+      </div>
+
+      <div class="card" id="treeCard" style="display:none;">
+        <h3>Struktur Pohon Keputusan</h3>
+        <div class="tree-wrap"><div class="tree" id="treeContainer"></div></div>
+      </div>
+
+      <div class="empty" id="treeEmpty">Konfigurasi belum lengkap. Kembali ke Langkah 02 dan pilih target serta atribut.</div>
+
+      <div class="row" id="step3Nav" style="display:none;">
+        <button class="btn-ghost" onclick="goStep(2)">← Kembali</button>
+        <button class="btn-primary" onclick="goStep(4)">Lanjut ke Prediksi →</button>
+      </div>
+    </div>
+
+    <!-- STEP 4: PREDICT -->
+    <div class="panel" data-panel="4">
+      <div class="eyebrow">Langkah 04</div>
+      <h1>Prediksi Penjualan</h1>
+      <p class="lede">Masukkan nilai atribut untuk sebuah kasus baru. Sistem akan menelusuri pohon keputusan yang telah dibangun untuk menghasilkan prediksi tingkat penjualan.</p>
+
+      <div class="card" id="predictCard" style="display:none;">
+        <h3>Input Atribut</h3>
+        <div class="predict-form" id="predictForm"></div>
+        <button class="btn-primary" id="predictBtn">Prediksi Tingkat Penjualan</button>
+      </div>
+
+      <div id="resultWrap"></div>
+
+      <div class="empty" id="predictEmpty">Bangun pohon keputusan terlebih dahulu di Langkah 03.</div>
+    </div>
+
+    <!-- STEP 5: FILTERING DATA -->
+    <div class="panel" data-panel="5">
+      <div class="eyebrow">Langkah 05</div>
+      <h1>Filtering Data</h1>
+      <p class="lede">Pilih kolom yang ingin difilter dan kolom yang ingin dikelompokkan, lalu sistem akan menghitung frekuensi kemunculan tiap nilai dan menampilkan peringkat dari yang terbesar.</p>
+
+      <div class="card" id="analysisConfigCard" style="display:none;">
+        <h3>Pengaturan Kolom</h3>
+        <div class="row">
+          <div class="field" style="min-width:220px;">
+            <label>Kolom Filter</label>
+            <select id="analysisModelCol">
+              <option value="" disabled selected>— Pilih Kolom —</option>
+            </select>
+          </div>
+          <div class="field" style="min-width:220px;">
+            <label>Kolom Pengelompokan</label>
+            <select id="analysisCountryCol">
+              <option value="" disabled selected>— Pilih Kolom —</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="analysisFilterCard" style="display:none;">
+        <h3>Pilih Nilai yang Ingin Difilter</h3>
+        <div class="chip-group" id="modelFilterChips"></div>
+        <div class="row" style="margin-top:18px;">
+          <button class="btn-primary" id="analyzeBtn">Tampilkan Hasil</button>
+        </div>
+      </div>
+
+      <div id="analysisResultWrap"></div>
+
+      <div class="empty" id="analysisEmpty">Muat data terlebih dahulu di Langkah 01.</div>
+    </div>
+
+  </div>
+</div>
+
+
+<script src="script.js"></script>
+</body>
+</html>
